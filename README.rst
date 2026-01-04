@@ -1,5 +1,9 @@
-Holophyly · Docker Container Manager API only
+Holophyly
 =============
+
+Docker Container Manager API only
+
+`Go Docs <https://pkg.go.dev/github.com/carterperez-dev/holophyly>`_
 
 2026 \| ©AngelaMos \| CarterPerez-dev
 
