@@ -14,7 +14,7 @@ COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app ./cmd/server
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 FROM gcr.io/distroless/static-debian12
 
