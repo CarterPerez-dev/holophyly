@@ -3,13 +3,17 @@ Holophyly
 
 Docker Container Manager API only
 
-`Go Docs <https://pkg.go.dev/github.com/carterperez-dev/holophyly>`_
+[Go Docs](https://pkg.go.dev/github.com/carterperez-dev/holophyly)
 
 2026 \| ©AngelaMos \| CarterPerez-dev
 
 ----
 
 UI is implemented in my personal CarterOS workspace website
+
+<img width="1914" height="1053" alt="Screenshot_20260112_033446" src="https://github.com/user-attachments/assets/6136a7d2-f58d-40e8-bc7e-601161f9bee2" />
+
+
 
 ::
 
