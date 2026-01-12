@@ -125,6 +125,50 @@ func (h *Handler) SetProjectProtection(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, proj)
 }
 
+func (h *Handler) SetProjectDisplayName(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	var req struct {
+		DisplayName string `json:"display_name"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.manager.SetProjectDisplayName(id, req.DisplayName); err != nil {
+		h.logger.Error("failed to set display name", "id", id, "error", err)
+		respondError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	proj, _ := h.manager.GetProject(id)
+	respondJSON(w, http.StatusOK, proj)
+}
+
+func (h *Handler) SetProjectHidden(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	var req struct {
+		Hidden bool `json:"hidden"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.manager.SetProjectHidden(id, req.Hidden); err != nil {
+		h.logger.Error("failed to set hidden status", "id", id, "error", err)
+		respondError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	proj, _ := h.manager.GetProject(id)
+	respondJSON(w, http.StatusOK, proj)
+}
+
 func (h *Handler) GetProjectStats(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 

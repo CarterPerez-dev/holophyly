@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,6 +69,8 @@ func (s *Scanner) Scan(ctx context.Context) (*ScanResult, error) {
 		Errors:   make([]ScanError, 0),
 	}
 
+	logger := slog.Default()
+
 	yamlFiles := make([]string, 0)
 
 	for _, scanPath := range s.paths {
@@ -119,6 +122,7 @@ func (s *Scanner) Scan(ctx context.Context) (*ScanResult, error) {
 
 		proj, err := s.parseComposeFile(ctx, yamlPath)
 		if err != nil {
+			logger.Debug("skipping compose file", "path", yamlPath, "error", err)
 			continue
 		}
 
@@ -158,6 +162,12 @@ func (s *Scanner) parseComposeFile(
 
 	projectName := deriveProjectName(path)
 
+	oldStderr := os.Stderr
+	devNull, devNullErr := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+	if devNullErr == nil {
+		os.Stderr = devNull
+	}
+
 	opts, err := cli.NewProjectOptions(
 		[]string{path},
 		cli.WithName(projectName),
@@ -165,11 +175,27 @@ func (s *Scanner) parseComposeFile(
 		cli.WithInterpolation(true),
 		cli.WithProfiles([]string{}),
 	)
+
+	os.Stderr = oldStderr
+	if devNull != nil {
+		devNull.Close()
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
+	os.Stderr = devNull
+	if devNullErr == nil {
+		devNull, _ = os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+	}
+
 	composeProject, err := opts.LoadProject(ctx)
+
+	os.Stderr = oldStderr
+	if devNull != nil {
+		devNull.Close()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -284,7 +310,37 @@ func expandPath(path string) string {
 
 func deriveProjectName(composePath string) string {
 	dir := filepath.Dir(composePath)
-	return filepath.Base(dir)
+	name := filepath.Base(dir)
+	return sanitizeProjectName(name)
+}
+
+func sanitizeProjectName(name string) string {
+	name = strings.ToLower(name)
+	name = strings.ReplaceAll(name, ".", "-")
+
+	var result strings.Builder
+	for i, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
+			result.WriteRune(r)
+		} else {
+			result.WriteRune('-')
+		}
+
+		if i == 0 && !(r >= 'a' && r <= 'z') && !(r >= '0' && r <= '9') {
+			result.Reset()
+			result.WriteRune('p')
+			result.WriteRune('-')
+		}
+	}
+
+	sanitized := result.String()
+	sanitized = strings.Trim(sanitized, "-_")
+
+	if sanitized == "" {
+		return "project"
+	}
+
+	return sanitized
 }
 
 func generateProjectID(composePath string) string {

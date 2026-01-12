@@ -8,10 +8,12 @@ package docker
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type ComposeResult struct {
@@ -139,12 +141,44 @@ func runComposeCommand(
 }
 
 /*
-GetComposeProjectName extracts the project name from a compose file path.
-Docker Compose uses the directory name as the default project name.
+GetComposeProjectName extracts the actual project name from a compose file.
+Uses docker compose config to get the resolved project name.
 */
 func GetComposeProjectName(composePath string) string {
-	dir := filepath.Dir(composePath)
-	return filepath.Base(dir)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(
+		ctx,
+		"docker",
+		"compose",
+		"-f",
+		composePath,
+		"config",
+		"--format",
+		"json",
+	)
+
+	output, err := cmd.Output()
+	if err != nil {
+		dir := filepath.Dir(composePath)
+		return filepath.Base(dir)
+	}
+
+	var config struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(output, &config); err != nil {
+		dir := filepath.Dir(composePath)
+		return filepath.Base(dir)
+	}
+
+	if config.Name == "" {
+		dir := filepath.Dir(composePath)
+		return filepath.Base(dir)
+	}
+
+	return config.Name
 }
 
 /*
