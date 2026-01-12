@@ -2,7 +2,8 @@ Holophyly
 =============
 
 Docker Container Manager API only
-Definitly one of my favorite projects it turned out so well!
+
+Definitely one of my favorite projects it turned out so well!
 
 [Go Docs](https://pkg.go.dev/github.com/carterperez-dev/holophyly)
 
