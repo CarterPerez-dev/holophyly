@@ -45,4 +45,3 @@ go install github.com/CarterPerez-dev/cmd/server@latest
 ----
 
 © 2026 CertGames · AngelaMos
-

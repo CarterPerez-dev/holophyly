@@ -24,6 +24,7 @@ type Config struct {
 	Protection ProtectionConfig `koanf:"protection"`
 	Docker     DockerConfig     `koanf:"docker"`
 	Logging    LoggingConfig    `koanf:"logging"`
+	DataDir    string           `koanf:"data_dir"`
 }
 
 type ServerConfig struct {

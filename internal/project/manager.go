@@ -14,12 +14,14 @@ import (
 	"github.com/carterperez-dev/holophyly/internal/docker"
 	"github.com/carterperez-dev/holophyly/internal/model"
 	"github.com/carterperez-dev/holophyly/internal/scanner"
+	"github.com/carterperez-dev/holophyly/internal/store"
 )
 
 type Manager struct {
 	docker         *docker.Client
 	scanner        *scanner.Scanner
 	statsCollector *docker.StatsCollector
+	store          *store.Store
 	projects       map[string]*model.Project
 	protection     *ProtectionConfig
 	mu             sync.RWMutex
@@ -30,11 +32,13 @@ func NewManager(
 	dockerClient *docker.Client,
 	fileScanner *scanner.Scanner,
 	protection *ProtectionConfig,
+	prefStore *store.Store,
 ) *Manager {
 	return &Manager{
 		docker:         dockerClient,
 		scanner:        fileScanner,
 		statsCollector: docker.NewStatsCollector(dockerClient),
+		store:          prefStore,
 		projects:       make(map[string]*model.Project),
 		protection:     protection,
 	}
@@ -52,6 +56,11 @@ func (m *Manager) Refresh(ctx context.Context) error {
 		return fmt.Errorf("getting containers: %w", err)
 	}
 
+	var prefs map[string]*store.ProjectPreference
+	if m.store != nil {
+		prefs, _ = m.store.GetAllPreferences()
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -64,12 +73,20 @@ func (m *Manager) Refresh(ctx context.Context) error {
 			proj.ProtectionReason = existing.ProtectionReason
 		}
 
+		if prefs != nil {
+			if pref, ok := prefs[proj.ID]; ok {
+				proj.DisplayName = pref.DisplayName
+				proj.Hidden = pref.Hidden
+			}
+		}
+
 		projectName := docker.GetComposeProjectName(proj.ComposeFilePath)
 		if containers, ok := containersByProject[projectName]; ok {
 			proj.Containers = containers
 			proj.Status = determineProjectStatus(containers)
 		} else {
 			proj.Status = model.StatusStopped
+			proj.Containers = []model.Container{}
 		}
 
 		m.applyProtection(proj)
@@ -82,7 +99,7 @@ func (m *Manager) Refresh(ctx context.Context) error {
 	return nil
 }
 
-// ListProjects returns all discovered projects.
+// ListProjects returns all discovered projects sorted by name.
 func (m *Manager) ListProjects() []*model.Project {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -91,6 +108,26 @@ func (m *Manager) ListProjects() []*model.Project {
 	for _, proj := range m.projects {
 		projects = append(projects, proj)
 	}
+
+	// Sort by name, then by compose filename for stable ordering
+	for i := 0; i < len(projects); i++ {
+		for j := i + 1; j < len(projects); j++ {
+			swapNeeded := false
+
+			if projects[i].Name > projects[j].Name {
+				swapNeeded = true
+			} else if projects[i].Name == projects[j].Name {
+				if projects[i].ComposeFile > projects[j].ComposeFile {
+					swapNeeded = true
+				}
+			}
+
+			if swapNeeded {
+				projects[i], projects[j] = projects[j], projects[i]
+			}
+		}
+	}
+
 	return projects
 }
 
@@ -207,6 +244,50 @@ func (m *Manager) SetProjectProtection(
 	} else {
 		proj.ProtectionReason = ""
 	}
+	proj.UpdatedAt = time.Now()
+
+	return nil
+}
+
+// SetProjectDisplayName sets a custom display name for a project.
+func (m *Manager) SetProjectDisplayName(id, displayName string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	proj, exists := m.projects[id]
+	if !exists {
+		return fmt.Errorf("project not found: %s", id)
+	}
+
+	if m.store != nil {
+		if err := m.store.SetDisplayName(id, displayName); err != nil {
+			return fmt.Errorf("saving display name: %w", err)
+		}
+	}
+
+	proj.DisplayName = displayName
+	proj.UpdatedAt = time.Now()
+
+	return nil
+}
+
+// SetProjectHidden sets whether a project should be hidden.
+func (m *Manager) SetProjectHidden(id string, hidden bool) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	proj, exists := m.projects[id]
+	if !exists {
+		return fmt.Errorf("project not found: %s", id)
+	}
+
+	if m.store != nil {
+		if err := m.store.SetHidden(id, hidden); err != nil {
+			return fmt.Errorf("saving hidden status: %w", err)
+		}
+	}
+
+	proj.Hidden = hidden
 	proj.UpdatedAt = time.Now()
 
 	return nil

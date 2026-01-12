@@ -67,6 +67,8 @@ func NewRouter(cfg RouterConfig) *chi.Mux {
 			r.Post("/{id}/stop", handler.StopProject)
 			r.Post("/{id}/restart", handler.RestartProject)
 			r.Post("/{id}/protect", handler.SetProjectProtection)
+			r.Put("/{id}/name", handler.SetProjectDisplayName)
+			r.Put("/{id}/hidden", handler.SetProjectHidden)
 			r.Get("/{id}/stats", handler.GetProjectStats)
 		})
 

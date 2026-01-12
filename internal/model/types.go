@@ -37,6 +37,7 @@ const (
 type Project struct {
 	ID               string           `json:"id"`
 	Name             string           `json:"name"`
+	DisplayName      string           `json:"display_name,omitempty"`
 	Path             string           `json:"path"`
 	ComposeFile      string           `json:"compose_file"`
 	ComposeFilePath  string           `json:"compose_file_path"`
@@ -44,6 +45,7 @@ type Project struct {
 	Status           ProjectStatus    `json:"status"`
 	Protected        bool             `json:"protected"`
 	ProtectionReason ProtectionReason `json:"protection_reason,omitempty"`
+	Hidden           bool             `json:"hidden"`
 	Containers       []Container      `json:"containers"`
 	Services         []string         `json:"services"`
 	CreatedAt        time.Time        `json:"created_at"`

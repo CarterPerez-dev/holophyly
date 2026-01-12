@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/carterperez-dev/holophyly/internal/model"
 	"github.com/carterperez-dev/holophyly/internal/project"
 	"github.com/carterperez-dev/holophyly/internal/scanner"
+	"github.com/carterperez-dev/holophyly/internal/store"
 	"github.com/carterperez-dev/holophyly/internal/websocket"
 	"github.com/carterperez-dev/holophyly/web"
 )
@@ -96,6 +98,20 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 		logger.Warn("docker compose not found - compose operations will fail")
 	}
 
+	dataDir := cfg.DataDir
+	if dataDir == "" {
+		home, _ := os.UserHomeDir()
+		dataDir = filepath.Join(home, ".config", "holophyly")
+	}
+
+	prefStore, err := store.New(dataDir)
+	if err != nil {
+		logger.Warn("failed to initialize preferences store", "error", err)
+	} else {
+		defer func() { _ = prefStore.Close() }()
+		logger.Info("preferences store initialized", "path", dataDir)
+	}
+
 	fileScanner := scanner.NewScanner(cfg.Scanner.Paths, cfg.Scanner.Exclude)
 
 	protection := project.NewProtectionConfig(
@@ -103,7 +119,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 		cfg.Protection.Projects,
 	)
 
-	manager := project.NewManager(dockerClient, fileScanner, protection)
+	manager := project.NewManager(dockerClient, fileScanner, protection, prefStore)
 
 	if err := manager.Refresh(ctx); err != nil {
 		logger.Warn("initial project scan failed", "error", err)
@@ -128,7 +144,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 		Addr:         cfg.Address(),
 		Handler:      router,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		WriteTimeout: 10 * time.Minute,
 		IdleTimeout:  60 * time.Second,
 	}
 
