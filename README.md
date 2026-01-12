@@ -11,7 +11,8 @@ Docker Container Manager API only
 
 UI is implemented in my personal CarterOS workspace website
 
-<img width="1920" height="1044" alt="Screenshot_20260112_033653" src="https://github.com/user-attachments/assets/a4af6c4f-ed61-469b-b8d6-f458b3c5a21e" />
+<img width="1920" height="974" alt="Screenshot_20260112_041518" src="https://github.com/user-attachments/assets/5f5caf3d-4ed5-4cdb-a009-0f57347d2ead" />
+
 
 
 
