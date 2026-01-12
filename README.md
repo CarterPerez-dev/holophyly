@@ -11,9 +11,10 @@ Definitely one of my favorite projects it turned out so well!
 
 ----
 
-UI is implemented in my personal CarterOS workspace website
+UI is implemented in my personal CarterOS workspace website:
 
-<img width="1656" height="967" alt="Screenshot_20260112_172710" src="https://github.com/user-attachments/assets/51f9f58d-f87a-4deb-9cfb-8a25dd7bc7a1" />
+---
+<img width="1645" height="926" alt="Screenshot_20260112_172710" src="https://github.com/user-attachments/assets/ed002347-2044-44e1-b79b-4a07e4dd1967" />
 
 
 
